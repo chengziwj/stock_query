@@ -24,6 +24,8 @@ Data flows through modules in sequence:
 
 ```
 data_fetcher.py → technical_indicators.py → trend_analyzer.py → support_resistance.py → volume_price.py → price_prediction.py
+                                    ↓
+                          feature_engineering.py ← data_processor.py
 ```
 
 **Module responsibilities:**
@@ -31,11 +33,13 @@ data_fetcher.py → technical_indicators.py → trend_analyzer.py → support_re
 | Module | Purpose |
 |--------|---------|
 | `data_fetcher.py` | Fetch stock data via akshare API. Contains `StockCodeParser` for parsing codes like "000001", "平安银行" |
-| `technical_indicators.py` | Calculate 12 indicators: MA, RSI, MACD, KDJ, WR, CCI, DMI, BBI, OBV, ATR, PSY, Bollinger Bands |
+| `technical_indicators.py` | Calculate 14 indicators: MA(5/10/20/60), RSI, MACD, KDJ, WR, CCI, DMI, BBI, OBV, ATR, PSY, Bollinger Bands |
 | `trend_analyzer.py` | Analyze indicator signals, return bullish/bearish/oscillating trend with reasons |
 | `support_resistance.py` | Identify support/resistance levels from swing highs/lows, Fibonacci, volume zones |
-| `volume_price.py` | Analyze volume-price patterns (价升量增, 价跌量缩, etc.), money flow, divergences |
+| `volume_price.py` | Analyze volume-price patterns (价升量增, 价跌量缩, 天量见天价, 地量见地价), money flow, divergences |
 | `price_prediction.py` | Generate price predictions using trend strength score (0-100), target prices, confidence levels |
+| `feature_engineering.py` | Feature extraction for ML training: returns, volatility, MA alignment, momentum, volume-price features |
+| `data_processor.py` | Unified data processing class with `fetch_data()`, `calculate_indicators()`, `create_features()`, `prepare_training_data()` |
 | `console_ui.py` | All output formatting: colored text, box drawing, width calculations for Chinese characters |
 | `indicator_guide.py` | Help system with indicator explanations and quick reference card |
 
@@ -44,6 +48,7 @@ data_fetcher.py → technical_indicators.py → trend_analyzer.py → support_re
 - DataFrame from `data_fetcher`: columns `trade_date`, `open`, `high`, `low`, `close`, `vol`
 - `indicators` dict: nested dict with keys `ma`, `rsi`, `macd`, `kdj`, `wr`, `cci`, `dmi`, `bbi`, `obv`, `atr`, `psy`, `bollinger`, `volume_ma`
 - `latest` dict: scalar values from `get_latest_values()` for display
+- `FeatureSet` dataclass: structured feature collection for ML training
 
 **Windows encoding:** `main.py` wraps stdout/stderr with UTF-8 `TextIOWrapper` for Chinese character support.
 

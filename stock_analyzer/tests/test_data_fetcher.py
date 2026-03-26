@@ -12,28 +12,28 @@ class TestStockCodeParser:
 
     def test_parse_6digit_sz_code(self):
         """测试深交所6位代码"""
-        assert StockCodeParser.parse('000001') == '000001.SZ'
-        assert StockCodeParser.parse('002594') == '002594.SZ'
-        assert StockCodeParser.parse('300750') == '300750.SZ'
+        assert StockCodeParser.parse('000001') == '000001'
+        assert StockCodeParser.parse('002594') == '002594'
+        assert StockCodeParser.parse('300750') == '300750'
 
     def test_parse_6digit_sh_code(self):
         """测试上交所6位代码"""
-        assert StockCodeParser.parse('600000') == '600000.SS'
-        assert StockCodeParser.parse('688981') == '688981.SS'
-        assert StockCodeParser.parse('600519') == '600519.SS'
+        assert StockCodeParser.parse('600000') == '600000'
+        assert StockCodeParser.parse('688981') == '688981'
+        assert StockCodeParser.parse('600519') == '600519'
 
     def test_parse_full_code(self):
         """测试完整代码格式"""
-        assert StockCodeParser.parse('000001.SZ') == '000001.SZ'
-        assert StockCodeParser.parse('600000.SS') == '600000.SS'
-        assert StockCodeParser.parse('000001.sz') == '000001.SZ'
-        assert StockCodeParser.parse('600000.ss') == '600000.SS'
+        assert StockCodeParser.parse('000001.SZ') == '000001'
+        assert StockCodeParser.parse('600000.SS') == '600000'
+        assert StockCodeParser.parse('000001.sz') == '000001'
+        assert StockCodeParser.parse('600000.ss') == '600000'
 
     def test_parse_chinese_name(self):
         """测试中文名称"""
-        assert StockCodeParser.parse('平安银行') == '000001.SZ'
-        assert StockCodeParser.parse('贵州茅台') == '600519.SS'
-        assert StockCodeParser.parse('招商银行') == '600036.SS'
+        assert StockCodeParser.parse('平安银行') == '000001'
+        assert StockCodeParser.parse('贵州茅台') == '600519'
+        assert StockCodeParser.parse('招商银行') == '600036'
 
     def test_parse_invalid_code(self):
         """测试无效代码"""
@@ -52,11 +52,24 @@ class TestStockCodeParser:
         assert StockCodeParser._is_chinese('000001') is False
         assert StockCodeParser._is_chinese('abc中国def') is True
 
-    def test_add_exchange_suffix(self):
-        """测试交易所后缀添加"""
-        assert StockCodeParser._add_exchange_suffix('000001') == '000001.SZ'
-        assert StockCodeParser._add_exchange_suffix('600000') == '600000.SS'
-        assert StockCodeParser._add_exchange_suffix('688981') == '688981.SS'
+    def test_get_exchange(self):
+        """测试获取交易所"""
+        assert StockCodeParser.get_exchange('000001') == 'sz'
+        assert StockCodeParser.get_exchange('600000') == 'sh'
+        assert StockCodeParser.get_exchange('688981') == 'sh'
+        assert StockCodeParser.get_exchange('300750') == 'sz'
+
+    def test_get_standard_code(self):
+        """测试获取标准代码"""
+        assert StockCodeParser.get_standard_code('000001') == '000001.SZ'  # 深交所
+        assert StockCodeParser.get_standard_code('600000') == '600000.SH'  # 上交所
+        assert StockCodeParser.get_standard_code('002594') == '002594.SZ'  # 深交所
+
+    def test_get_stock_name(self):
+        """测试获取股票名称"""
+        assert StockCodeParser.get_stock_name('000001') == '平安银行'
+        assert StockCodeParser.get_stock_name('600519') == '贵州茅台'
+        assert StockCodeParser.get_stock_name('999999') == '未知'
 
 
 class TestDataFetcher:
@@ -65,13 +78,8 @@ class TestDataFetcher:
     def test_init(self):
         """测试初始化"""
         fetcher = DataFetcher()
-        assert fetcher.token is None
-        assert fetcher._pro is None
-
-    def test_init_with_token(self):
-        """测试带token初始化"""
-        fetcher = DataFetcher(token='test_token')
-        assert fetcher.token == 'test_token'
+        assert fetcher.MAX_RETRIES == 3
+        assert fetcher.RETRY_INTERVAL == 2
 
     def test_process_data(self):
         """测试数据处理"""
@@ -79,12 +87,12 @@ class TestDataFetcher:
 
         # 创建测试数据
         df = pd.DataFrame({
-            'trade_date': ['20240101', '20240102', '20240103'] * 10,
-            'open': [10.0] * 30,
-            'high': [10.5] * 30,
-            'low': [9.5] * 30,
-            'close': [10.2] * 30,
-            'vol': [1000000] * 30
+            '日期': ['20240101', '20240102', '20240103'] * 10,
+            '开盘': [10.0] * 30,
+            '最高': [10.5] * 30,
+            '最低': [9.5] * 30,
+            '收盘': [10.2] * 30,
+            '成交量': [1000000] * 30
         })
 
         processed = fetcher._process_data(df)

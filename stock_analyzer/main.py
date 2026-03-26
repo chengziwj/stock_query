@@ -94,12 +94,18 @@ def format_output(
     flow_color = Colors.BRIGHT_RED if mf['flow_signal'] == 'bullish' else Colors.BRIGHT_GREEN if mf['flow_signal'] == 'bearish' else Colors.WHITE
     vp_lines.append(f"资金流向: {colorize(mf['flow_status'], flow_color)}  MFI: {mf['mfi']:.1f}")
 
+    # 极端成交量检测
+    if vp_analysis.get('extreme_volume', {}).get('detected'):
+        ev = vp_analysis['extreme_volume']
+        ev_color = Colors.BRIGHT_RED if ev['signal'] == 'bearish' else Colors.BRIGHT_GREEN
+        vp_lines.append(f"特殊信号: {colorize(ev['pattern'], ev_color + Colors.BOLD)} - {ev['description']}")
+
     lines.append("")
     lines.append(draw_section("量价关系", '\n'.join(vp_lines)))
 
     # ===== 基础技术指标 =====
     base_lines = []
-    ma_str = f"MA5: {latest['ma']['MA5']:.2f}  MA20: {latest['ma']['MA20']:.2f}"
+    ma_str = f"MA5: {latest['ma']['MA5']:.2f}  MA10: {latest['ma']['MA10']:.2f}  MA20: {latest['ma']['MA20']:.2f}"
     if latest['ma']['MA60']:
         ma_str += f"  MA60: {latest['ma']['MA60']:.2f}"
     base_lines.append(ma_str)

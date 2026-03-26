@@ -19,6 +19,8 @@ class VolumePricePattern(Enum):
     VOLUME_BREAKOUT = "放量突破"   # 放量突破
     VOLUME_BREAKDOWN = "放量下跌"  # 放量下跌
     CONSOLIDATION = "缩量盘整"     # 缩量盘整
+    EXTREME_VOLUME_TOP = "天量见天价"  # 天量见天价
+    EXTREME_VOLUME_BOTTOM = "地量见地价"  # 地量见地价
 
 
 @dataclass
@@ -46,6 +48,94 @@ def calculate_volume_ratio(df: pd.DataFrame, period: int = 5) -> pd.Series:
     vol_ma = df['vol'].rolling(window=period).mean()
     volume_ratio = df['vol'] / vol_ma
     return volume_ratio
+
+
+def calculate_turnover_rate(df: pd.DataFrame, total_shares: float = None) -> pd.Series:
+    """
+    计算换手率
+
+    换手率 = 成交量 / 流通股本 * 100%
+
+    Args:
+        df: 包含 'vol' 列的DataFrame
+        total_shares: 流通股本（股），如未提供则无法计算
+
+    Returns:
+        换手率Series (%)
+    """
+    if total_shares is None or total_shares <= 0:
+        # 无法计算，返回空Series
+        return pd.Series(index=df.index, dtype=float)
+
+    turnover_rate = df['vol'] / total_shares * 100
+    return turnover_rate
+
+
+def detect_extreme_volume(df: pd.DataFrame, period: int = 60) -> Dict:
+    """
+    检测极端成交量形态
+
+    天量见天价：成交量创近期新高，价格也在高位
+    地量见地价：成交量创近期新低，价格也在低位
+
+    Args:
+        df: 包含 'close', 'vol' 列的DataFrame
+        period: 回看周期
+
+    Returns:
+        极端成交量检测结果
+    """
+    if len(df) < period:
+        return {'detected': False, 'pattern': None, 'description': '数据不足'}
+
+    close = df['close']
+    vol = df['vol']
+
+    # 当前成交量和价格
+    current_vol = vol.iloc[-1]
+    current_close = close.iloc[-1]
+
+    # 近期数据
+    recent_vol = vol.iloc[-period:]
+    recent_close = close.iloc[-period:]
+
+    # 成交量极值
+    vol_max = recent_vol.max()
+    vol_min = recent_vol.min()
+    vol_mean = recent_vol.mean()
+
+    # 价格位置（相对于近期高低点）
+    price_high = recent_close.max()
+    price_low = recent_close.min()
+    price_position = (current_close - price_low) / (price_high - price_low) if price_high != price_low else 0.5
+
+    # 天量见天价检测
+    # 条件：成交量接近或超过近期最高，价格在高位区间
+    if current_vol >= vol_max * 0.9 and price_position > 0.8:
+        return {
+            'detected': True,
+            'pattern': VolumePricePattern.EXTREME_VOLUME_TOP.value,
+            'signal': 'bearish',
+            'strength': 5,
+            'description': f"天量见天价：成交量达到近期峰值{current_vol/100000000:.2f}亿，价格处于高位区间({price_position*100:.1f}%)，警惕顶部风险"
+        }
+
+    # 地量见地价检测
+    # 条件：成交量接近近期最低，价格在低位区间
+    if current_vol <= vol_min * 1.1 and current_vol < vol_mean * 0.5 and price_position < 0.3:
+        return {
+            'detected': True,
+            'pattern': VolumePricePattern.EXTREME_VOLUME_BOTTOM.value,
+            'signal': 'bullish',
+            'strength': 4,
+            'description': f"地量见地价：成交量萎缩至近期低点{current_vol/100000000:.2f}亿，价格处于低位区间({price_position*100:.1f}%)，可能出现底部"
+        }
+
+    return {
+        'detected': False,
+        'pattern': None,
+        'description': f"成交量正常，量比{current_vol/vol_mean:.2f}"
+    }
 
 
 def calculate_obv_trend(df: pd.DataFrame, period: int = 5) -> pd.Series:
@@ -316,6 +406,9 @@ def get_volume_price_analysis(df: pd.DataFrame, indicators: Dict) -> Dict:
     vol_ma10 = df['vol'].rolling(window=10).mean().iloc[-1]
     vol_trend = "放量" if vol_ma5 > vol_ma10 else "缩量"
 
+    # 极端成交量检测
+    extreme_volume = detect_extreme_volume(df)
+
     return {
         'pattern': vp_signal.pattern.value,
         'signal': vp_signal.signal,
@@ -324,5 +417,6 @@ def get_volume_price_analysis(df: pd.DataFrame, indicators: Dict) -> Dict:
         'volume_ratio': round(vol_ratio, 2),
         'volume_trend': vol_trend,
         'divergences': divergences,
-        'money_flow': money_flow
+        'money_flow': money_flow,
+        'extreme_volume': extreme_volume
     }

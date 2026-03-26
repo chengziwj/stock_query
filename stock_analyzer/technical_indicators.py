@@ -8,13 +8,13 @@ import pandas as pd
 
 # ============ 基础指标 ============
 
-def calculate_ma(df: pd.DataFrame, periods: Tuple[int, ...] = (5, 20, 60)) -> Dict[str, pd.Series]:
+def calculate_ma(df: pd.DataFrame, periods: Tuple[int, ...] = (5, 10, 20, 60)) -> Dict[str, pd.Series]:
     """
     计算简单移动平均线
 
     Args:
         df: 包含 'close' 列的DataFrame
-        periods: 周期列表，默认 (5, 20, 60)
+        periods: 周期列表，默认 (5, 10, 20, 60)
 
     Returns:
         字典，键为 'MA{period}'，值为移动平均线Series
@@ -463,6 +463,7 @@ def get_latest_values(indicators: Dict, df: pd.DataFrame) -> Dict:
     # MA值
     latest['ma'] = {
         'MA5': round(indicators['ma']['MA5'].iloc[last_idx], 2),
+        'MA10': round(indicators['ma']['MA10'].iloc[last_idx], 2),
         'MA20': round(indicators['ma']['MA20'].iloc[last_idx], 2),
         'MA60': round(indicators['ma']['MA60'].iloc[last_idx], 2) if not pd.isna(indicators['ma']['MA60'].iloc[last_idx]) else None
     }

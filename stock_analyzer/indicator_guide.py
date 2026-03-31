@@ -176,6 +176,147 @@ INDICATOR_GUIDE = {
             "量价背离：警惕趋势反转"
         ],
         "tips": "量在价先，成交量是价格的先行指标。天量见天价，地量见地价。"
+    },
+
+    # ========== 新增指标 ==========
+
+    "SAR": {
+        "name": "抛物线转向指标 (Parabolic SAR)",
+        "calculation": "SAR(n+1) = SAR(n) + AF×(EP-SAR(n))，AF从0.02开始递增至0.20",
+        "signals": [
+            "价格 > SAR：多头持仓，SAR为动态止损位",
+            "价格 < SAR：空头持仓，SAR为动态止损位",
+            "价格触及SAR：趋势反转信号",
+            "SAR点位上移：多头趋势加速",
+            "SAR点位下移：空头趋势加速"
+        ],
+        "tips": "SAR是动态止损工具，适合已有明确趋势时使用。震荡行情中SAR频繁反转，需谨慎。"
+    },
+
+    "ENV": {
+        "name": "包络线 (Envelope)",
+        "calculation": "上轨=MA×(1+K)，下轨=MA×(1-K)，默认MA20、K=5%",
+        "signals": [
+            "价格触及上轨：短期超买，可能回调",
+            "价格触及下轨：短期超卖，可能反弹",
+            "价格在中轨附近：趋势平稳",
+            "轨道收窄：波动减小，可能突破",
+            "轨道扩张：波动加大，趋势明确"
+        ],
+        "tips": "ENV比布林带简单直观，适合判断短期超买超卖。突破上轨后持续在上轨外运行=强势。"
+    },
+
+    "MFI": {
+        "name": "资金流量指标 (Money Flow Index)",
+        "calculation": "MFI = 100 - 100/(1+PMF/NMF)，PMF/NMF为正负资金流量比",
+        "range": "0-100",
+        "signals": [
+            "MFI > 80：超买，资金流入过多，可能回调",
+            "MFI < 20：超卖，资金流出过多，可能反弹",
+            "MFI上穿20：买入信号",
+            "MFI下穿80：卖出信号",
+            "MFI与价格背离：趋势反转预警"
+        ],
+        "tips": "MFI是RSI的成交量版本，结合了量价信息。背离信号比RSI更可靠。"
+    },
+
+    "VROC": {
+        "name": "成交量变动率 (Volume Rate of Change)",
+        "calculation": "VROC = (今成交量-N日前成交量)/N日前成交量×100",
+        "signals": [
+            "VROC > 0：成交量增加",
+            "VROC < 0：成交量减少",
+            "VROC大幅上升(>50)：成交量急剧放大，关注突破",
+            "VROC持续高位：成交活跃，趋势延续",
+            "VROC急剧下降：成交萎缩，趋势可能衰竭"
+        ],
+        "tips": "VROC衡量成交量变化速度。配合价格ROC使用，量价同向=趋势确认。"
+    },
+
+    "VWAP": {
+        "name": "成交量加权平均价 (Volume Weighted Average Price)",
+        "calculation": "VWAP = Σ(典型价格×成交量)/Σ成交量",
+        "signals": [
+            "价格 > VWAP：多头占优，适合持有",
+            "价格 < VWAP：空头占优，适合观望",
+            "价格从下方突破VWAP：买入信号",
+            "价格从上方跌破VWAP：卖出信号",
+            "VWAP附近：多空平衡区域"
+        ],
+        "tips": "VWAP是机构交易的重要参考。日内交易者常用VWAP判断买卖时机。"
+    },
+
+    "ROC": {
+        "name": "变动率指标 (Rate of Change)",
+        "calculation": "ROC = (今收盘-N日前收盘)/N日前收盘×100",
+        "signals": [
+            "ROC > 0：价格上涨动量",
+            "ROC < 0：价格下跌动量",
+            "ROC上穿0线：买入信号",
+            "ROC下穿0线：卖出信号",
+            "ROC达到极端值(±20)：趋势可能反转",
+            "ROC与价格背离：趋势减弱预警"
+        ],
+        "tips": "ROC反映价格变化速度，是动量的百分比形式。ROC比MTM更直观。"
+    },
+
+    "MTM": {
+        "name": "动量指标 (Momentum)",
+        "calculation": "MTM = 今收盘价 - N日前收盘价",
+        "signals": [
+            "MTM > 0：价格上涨动量",
+            "MTM < 0：价格下跌动量",
+            "MTM上穿0线：买入信号",
+            "MTM下穿0线：卖出信号",
+            "MTM持续上升：动量增强",
+            "MTM持续下降：动量减弱"
+        ],
+        "tips": "MTM是ROC的绝对值形式。适合判断动量方向，但不如ROC直观。"
+    },
+
+    "UOS": {
+        "name": "终极指标 (Ultimate Oscillator)",
+        "calculation": "UOS = 100×(ACC1×4+ACC2×2+ACC3)/7，三周期加权(7,14,28)",
+        "range": "0-100",
+        "signals": [
+            "UOS > 70：超买区域",
+            "UOS < 30：超卖区域",
+            "UOS上穿35：买入信号（保守）",
+            "UOS下穿70：卖出信号（保守）",
+            "UOS从超卖区上升+背离：强烈买入",
+            "UOS从超买区下降+背离：强烈卖出"
+        ],
+        "tips": "UOS三周期加权设计减少假信号。背离信号是其核心用法，比普通超买超卖更可靠。"
+    },
+
+    "VR": {
+        "name": "容量比率 (Volume Ratio)",
+        "calculation": "VR = (上涨量+下跌量/2)/(下跌量+上涨量/2)×100",
+        "range": "理论上无上限，通常0-500",
+        "signals": [
+            "VR > 450：过度超买，高风险",
+            "VR 300-450：强势区域，多头活跃",
+            "VR 150-300：正常上升区域",
+            "VR 70-150：正常震荡区域",
+            "VR 40-70：弱势区域，空头活跃",
+            "VR < 40：过度超卖，反弹机会"
+        ],
+        "tips": "VR反映市场买卖意愿强度。极端值往往预示行情转折。"
+    },
+
+    "ARBR": {
+        "name": "人气意愿指标 (AR & BR)",
+        "calculation": "AR=Σ(高-开)/Σ(开-低)×100，BR=Σ(高-昨收)/Σ(昨收-低)×100",
+        "range": "AR通常50-200，BR通常50-300",
+        "signals": [
+            "AR > 150：人气过热，可能回调",
+            "AR < 50：人气低迷，可能反弹",
+            "BR > 300：意愿过热，高风险",
+            "BR < 50：意愿低迷，超卖信号",
+            "AR、BR同时极端高位：强烈卖出",
+            "AR、BR同时极端低位：强烈买入"
+        ],
+        "tips": "AR反映开盘后的人气，BR反映昨日收盘后的意愿。BR对价格更敏感，AR对市场情绪更稳定。"
     }
 }
 
@@ -237,29 +378,46 @@ def get_quick_reference() -> str:
     lines.append("\n【超买超卖判断】")
     lines.append("  RSI > 70 或 KDJ.K > 80 或 WR < -80 → 超买，注意回调")
     lines.append("  RSI < 30 或 KDJ.K < 20 或 WR > -20 → 超卖，可能反弹")
+    lines.append("  MFI > 80 或 UOS > 70 → 超买")
+    lines.append("  MFI < 20 或 UOS < 30 → 超卖")
 
     lines.append("\n【趋势方向判断】")
     lines.append("  MA多头排列(价>MA5>MA20>MA60) → 强烈看涨")
     lines.append("  MA空头排列(价<MA5<MA20<MA60) → 强烈看跌")
     lines.append("  价格 > BBI → 多头市场")
+    lines.append("  价格 > SAR → 多头持仓")
+    lines.append("  价格 > VWAP → 多头占优")
     lines.append("  +DI > -DI → 多头优势")
 
     lines.append("\n【买卖信号】")
     lines.append("  MACD金叉 + 零轴上方 → 强势买入")
     lines.append("  KDJ低位金叉(J<20) → 抄底买入")
+    lines.append("  ROC/MTM上穿0线 → 动量转正买入")
+    lines.append("  UOS上穿35 + 背离 → 强烈买入")
     lines.append("  MACD死叉 + 零轴下方 → 强势卖出")
+    lines.append("  价格跌破SAR → 趋势反转卖出")
 
     lines.append("\n【趋势强度】")
     lines.append("  ADX > 25 → 趋势明确，顺势操作")
     lines.append("  ADX < 20 → 震荡行情，高抛低吸")
+    lines.append("  VR > 300 → 强势区域")
+    lines.append("  VR < 70 → 弱势区域")
+
+    lines.append("\n【市场情绪】")
+    lines.append("  AR > 150 或 BR > 300 → 过热，警惕回调")
+    lines.append("  AR < 50 或 BR < 50 → 低迷，可能反弹")
+    lines.append("  PSY > 75 → 市场情绪过热")
 
     lines.append("\n【量价关系】")
     lines.append("  放量上涨 → 买盘积极，继续持有")
-    lines.append("  顶背离(价涨OBV跌) → 警惕见顶")
-    lines.append("  底背离(价跌OBV涨) → 警惕见底")
+    lines.append("  顶背离(价涨OBV跌/MFI跌) → 警惕见顶")
+    lines.append("  底背离(价跌OBV涨/MFI涨) → 警惕见底")
+    lines.append("  VROC大幅上升 → 成交放大，关注突破")
 
     lines.append("\n【止损设置】")
-    lines.append("  动态止损 = 买入价 - 2×ATR")
+    lines.append("  SAR动态止损 → 价格跌破SAR即止损")
+    lines.append("  ATR止损 = 买入价 - 2×ATR")
+    lines.append("  ENV下轨止损 → 价格跌破下轨×0.98")
     lines.append("  支撑位止损 = 支撑位 × 0.97")
 
     lines.append("\n" + "=" * 60)
@@ -274,11 +432,12 @@ def print_all_indicators_summary():
     print("=" * 60)
 
     categories = {
-        "基础趋势指标": ["MA均线", "MACD", "BOLL"],
-        "动量超买超卖指标": ["RSI", "KDJ", "WR", "CCI"],
+        "基础趋势指标": ["MA均线", "MACD", "BOLL", "SAR", "ENV"],
+        "动量超买超卖指标": ["RSI", "KDJ", "WR", "CCI", "ROC", "MTM", "UOS"],
         "趋势强度指标": ["DMI", "BBI"],
-        "成交量指标": ["OBV", "成交量"],
-        "波动率指标": ["ATR", "PSY"]
+        "成交量指标": ["OBV", "MFI", "VROC", "VWAP", "成交量"],
+        "市场情绪指标": ["VR", "ARBR", "PSY"],
+        "波动率指标": ["ATR"]
     }
 
     for category, indicators in categories.items():

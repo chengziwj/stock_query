@@ -46,3 +46,7 @@ Thumbs.db
 # Local settings
 *.local
 .env
+
+# Worktrees
+.worktrees/
+worktrees/

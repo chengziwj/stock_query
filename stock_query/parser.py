@@ -17,10 +17,11 @@ _A_FIELDS = [
     "ask3_price", "ask3_vol", "ask4_price", "ask4_vol",
     "ask5_price", "ask5_vol",
     "date", "time", "change", "change_pct",
-    "high", "low", "volume_total", "amount",
+    "high", "low", "_composite", "volume_total", "amount",
     "turnover", "pe_ratio",
-    "_u39", "high_limit", "low_limit",
+    "_u40", "_u41", "_u42",
     "amplitude", "market_cap", "total_market_cap", "pb_ratio",
+    "high_limit", "low_limit", "quantity_ratio",
 ]
 
 # HK stocks have fewer fields in different order

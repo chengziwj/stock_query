@@ -19,6 +19,8 @@ def build_parser() -> argparse.ArgumentParser:
         "codes",
         help="Stock code(s), comma-separated. E.g. 000001,600000,AAPL",
     )
+
+    sub.add_parser("repl", help="Interactive REPL with history tab-completion")
     return parser
 
 
@@ -67,6 +69,9 @@ def main() -> None:
 
     if args.command == "query":
         run_query(args.codes)
+    elif args.command == "repl":
+        from stock_query.repl import run_repl
+        run_repl()
     else:
         parser.print_help()
         sys.exit(1)

@@ -53,6 +53,10 @@ def fetch_quotes(codes: list[str]) -> str:
     Returns:
         Raw response text from the API, or empty string on HTTP error.
     """
+    if not codes:
+        return ""
+
+    codes = [c.strip() for c in codes]
     url = BASE_URL + ",".join(codes)
 
     for attempt in range(2):
@@ -60,7 +64,9 @@ def fetch_quotes(codes: list[str]) -> str:
             resp = requests.get(url, headers=HEADERS, timeout=TIMEOUT)
             if resp.status_code == 200:
                 return resp.text
+            if attempt == 0 and resp.status_code >= 500:
+                continue
             return ""
-        except requests.ConnectionError:
+        except (requests.ConnectionError, requests.Timeout):
             if attempt == 1:
                 raise

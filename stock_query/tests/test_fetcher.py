@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import patch, Mock
 import requests
-from stock_query.fetcher import infer_prefix, fetch_quotes
+from stock_query.fetcher import BASE_URL, infer_prefix, fetch_quotes
 
 
 SAMPLE_RESPONSE = (
@@ -54,13 +54,14 @@ def test_fetch_quotes_single():
         mock_get.assert_called_once()
         url = mock_get.call_args[0][0]
         assert "sz000001" in url
-        assert url.startswith("http://qt.gtimg.cn/q=")
+        assert url.startswith(BASE_URL)
 
 
 def test_fetch_quotes_batch():
     with patch("stock_query.fetcher.requests.get") as mock_get:
         mock_get.return_value = Mock(status_code=200, text=SAMPLE_RESPONSE)
         result = fetch_quotes(["sz000001", "sh600000"])
+        assert result == SAMPLE_RESPONSE
         url = mock_get.call_args[0][0]
         assert "sz000001" in url
         assert "sh600000" in url
@@ -71,6 +72,15 @@ def test_fetch_quotes_network_error():
         mock_get.side_effect = requests.ConnectionError("no network")
         with pytest.raises(requests.ConnectionError):
             fetch_quotes(["sz000001"])
+        assert mock_get.call_count == 2
+
+
+def test_fetch_quotes_timeout_with_retry():
+    with patch("stock_query.fetcher.requests.get") as mock_get:
+        mock_get.side_effect = requests.Timeout("timed out")
+        with pytest.raises(requests.Timeout):
+            fetch_quotes(["sz000001"])
+        assert mock_get.call_count == 2
 
 
 def test_fetch_quotes_http_error():

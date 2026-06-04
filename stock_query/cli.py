@@ -62,23 +62,34 @@ def _parse_duration(raw: str) -> int:
     return value
 
 
+def _countdown(interval: int) -> None:
+    """Display a countdown timer, updating in place each second."""
+    sys.stdout.flush()
+    for remaining in range(interval, 0, -1):
+        m, s = divmod(remaining, 60)
+        if m > 0:
+            label = f"{m}m{s}s"
+        else:
+            label = f"{s}s"
+        print(f"\033[1mNext refresh in {label}...\033[0m  (Ctrl+C to stop)", end="")
+        sys.stdout.flush()
+        time.sleep(1)
+        print("\r\033[K", end="")  # carriage return + clear line
+
+
 def _watch_loop(codes_str: str, interval: int) -> None:
     """Run a query repeatedly with the given interval in seconds."""
-    first = True
     try:
         while True:
-            if not first:
-                time.sleep(interval)
-            first = False
-
-            # Clear screen
             os.system("clear" if os.name == "posix" else "cls")
 
             now = datetime.now().strftime("%H:%M:%S")
-            print(f"\033[1mAuto-refresh every {interval}s\033[0m  |  {now}  |  Ctrl+C to stop")
+            print(f"\033[1mAuto-refresh every {interval}s\033[0m  |  {now}")
             print()
 
             run_query(codes_str, save_history=False)
+
+            _countdown(interval)
     except KeyboardInterrupt:
         print("\nStopped.")
 

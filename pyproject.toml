@@ -1,0 +1,32 @@
+[project]
+name = "stock_query"
+version = "0.1.0"
+description = "基于腾讯财经行情接口的股票实时行情查询 CLI 工具"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "requests>=2.28.0",
+    "rich>=13.0.0",
+]
+
+[project.scripts]
+stock-query = "stock_query.cli:main"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.pytest.ini_options]
+markers = [
+    "integration: mark test as an integration test requiring network",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=7.0.0",
+]

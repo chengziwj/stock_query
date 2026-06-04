@@ -4,8 +4,10 @@
 
 ## 安装
 
+使用 [uv](https://docs.astral.sh/uv/) 管理依赖：
+
 ```bash
-pip install -r stock_query/requirements.txt
+uv sync
 ```
 
 依赖：`requests`（HTTP 请求）、`rich`（终端美化输出）。
@@ -16,10 +18,10 @@ pip install -r stock_query/requirements.txt
 
 ```bash
 # 单只股票
-python3 -m stock_query query 000001
+uv run stock-query query 000001
 
 # 批量查询，逗号分隔
-python3 -m stock_query query 000001,600000,00700,AAPL
+uv run stock-query query 000001,600000,00700,AAPL
 ```
 
 代码前缀自动推断：
@@ -31,10 +33,48 @@ python3 -m stock_query query 000001,600000,00700,AAPL
 | 0 开头 5 位 | 港股 | `00700` → 腾讯控股 |
 | 纯字母 | 美股 | `AAPL` → Apple |
 
+> 查询过的股票代码会自动写入历史文件 `~/.stock_query_history`。
+
+### Shell Tab 补全
+
+激活 bash 补全后，`stock_query query` 可按 Tab 自动补全历史中查询过的股票代码：
+
+```bash
+# 激活（可加入 ~/.bashrc）
+eval "$(stock_query shell-completions)"
+```
+
+### 交互式历史选择器
+
+```bash
+uv run stock-query history
+```
+
+进入交互界面后，上下键移动、空格标记多选、回车查询：
+
+```
+Select stocks to query — ↑↓ move  Space mark  Enter confirm  q quit
+
+    1. [ ] 603773       沃格光电
+    2. [x] 300502       新易盛
+    3. [x] 000001       平安银行
+
+↑↓:move  Space:mark  Enter:query  q:quit  a:select-all  d:deselect-all
+```
+
+也支持非交互模式：
+
+```bash
+uv run stock-query history --list           # 纯文本列表
+uv run stock-query history --pick 1,3,5     # 按索引查询
+uv run stock-query history --rm 2,4         # 按索引删除
+uv run stock-query history --clear          # 清空所有历史
+```
+
 ### 交互式 REPL（支持 Tab 历史补全）
 
 ```bash
-python3 -m stock_query repl
+uv run stock-query repl
 ```
 
 进入交互模式后：
@@ -87,12 +127,12 @@ python3 -m stock_query repl
 stock_query/
 ├── __init__.py        # 包入口
 ├── __main__.py        # python -m 入口
-├── cli.py             # argparse CLI（query / repl 子命令）
+├── cli.py             # argparse CLI（query / history / complete / repl 子命令）
 ├── fetcher.py         # HTTP 客户端，代码前缀推断
 ├── parser.py          # 腾讯 API 响应解析，按市场映射字段
 ├── formatter.py       # Rich 终端着色输出
+├── picker.py          # curses 交互式多选器
 ├── repl.py            # 交互式 REPL + 历史管理
-├── requirements.txt
 └── tests/
     ├── test_fetcher.py
     ├── test_parser.py
@@ -107,10 +147,10 @@ stock_query/
 
 ```bash
 # 全部测试
-python3 -m pytest stock_query/tests/ -v
+uv run pytest stock_query/tests/ -v
 
 # 跳过集成测试（离线环境）
-python3 -m pytest stock_query/tests/ -v -m "not integration"
+uv run pytest stock_query/tests/ -v -m "not integration"
 ```
 
 ## 数据来源

@@ -66,6 +66,50 @@ class TestHistoryStore:
         store = HistoryStore(path=path)
         assert store.load() == []
 
+    def test_remove_by_index(self):
+        path = os.path.join(tempfile.mkdtemp(), "test_history")
+        try:
+            store = HistoryStore(path=path)
+            store.add("000001", "平安银行")
+            store.add("600000", "浦发银行")
+            store.add("000002", "万科A")
+            # Remove indices 1 and 3 (1-based: most recent = 1)
+            removed = store.remove_by_index([1, 3])
+            assert len(removed) == 2
+            assert removed[0][0] == "000002"  # most recent
+            assert removed[1][0] == "000001"  # oldest
+            # Only 600000 remains
+            entries = store.load()
+            assert len(entries) == 1
+            assert entries[0][0] == "600000"
+        finally:
+            if os.path.exists(path):
+                os.remove(path)
+
+    def test_get_by_index(self):
+        path = os.path.join(tempfile.mkdtemp(), "test_history")
+        try:
+            store = HistoryStore(path=path)
+            store.add("000001", "平安银行")
+            store.add("600000", "浦发银行")
+            store.add("000002", "万科A")
+            codes = store.get_by_index([1, 3])
+            assert codes == ["000002", "000001"]
+        finally:
+            if os.path.exists(path):
+                os.remove(path)
+
+    def test_get_by_index_out_of_range(self):
+        path = os.path.join(tempfile.mkdtemp(), "test_history")
+        try:
+            store = HistoryStore(path=path)
+            store.add("000001", "平安银行")
+            codes = store.get_by_index([1, 5, 0])
+            assert codes == ["000001"]  # only valid index
+        finally:
+            if os.path.exists(path):
+                os.remove(path)
+
     def test_load_malformed_line(self):
         path = os.path.join(tempfile.mkdtemp(), "test_history")
         try:

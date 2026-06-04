@@ -49,6 +49,34 @@ class HistoryStore:
             for e in entries:
                 f.write(e + "\n")
 
+    def _write_lines(self, lines: list[str]) -> None:
+        with open(self.path, "w") as f:
+            for line in lines:
+                f.write(line + "\n")
+
+    def remove_by_index(self, indices: list[int]) -> list[tuple[str, str]]:
+        """Remove entries by 1-based indices. Returns the removed entries."""
+        entries = self._read()
+        removed = []
+        kept = []
+        for i, line in enumerate(entries, 1):
+            if i in indices:
+                parts = line.split(None, 1)
+                removed.append((parts[0], parts[1] if len(parts) > 1 else ""))
+            else:
+                kept.append(line)
+        self._write_lines(kept)
+        return removed
+
+    def get_by_index(self, indices: list[int]) -> list[str]:
+        """Return stock codes at 1-based indices."""
+        entries = self.load()
+        codes = []
+        for i in indices:
+            if 1 <= i <= len(entries):
+                codes.append(entries[i - 1][0])
+        return codes
+
     def clear(self) -> None:
         if os.path.exists(self.path):
             os.remove(self.path)

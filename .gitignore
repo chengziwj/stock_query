@@ -50,3 +50,6 @@ Thumbs.db
 # Worktrees
 .worktrees/
 worktrees/
+
+# Local data
+.data/

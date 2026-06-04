@@ -12,15 +12,26 @@ uv sync
 
 依赖：`requests`（HTTP 请求）、`rich`（终端美化输出）。
 
+## 命令速览
+
+| 命令 | 作用 |
+|------|------|
+| `stock_query query <codes>` | 查询股票行情 |
+| `stock_query history` | 交互式历史选择器（多选查询） |
+| `stock_query last` | 一键重查上一次批量查询 |
+| `stock_query watchlist` | 自选股管理（交互式多选查询） |
+| `stock_query repl` | 交互式 REPL（Tab 补全） |
+| `stock_query shell-completions` | 生成 bash 补全脚本 |
+
 ## 用法
 
 ### 单次查询
 
 ```bash
-# 单只股票
+# 单只
 uv run stock-query query 000001
 
-# 批量查询，逗号分隔
+# 批量，逗号分隔
 uv run stock-query query 000001,600000,00700,AAPL
 ```
 
@@ -33,57 +44,58 @@ uv run stock-query query 000001,600000,00700,AAPL
 | 0 开头 5 位 | 港股 | `00700` → 腾讯控股 |
 | 纯字母 | 美股 | `AAPL` → Apple |
 
-> 查询过的股票代码会自动写入历史文件 `~/.stock_query_history`。
-
 ### Shell Tab 补全
 
-激活 bash 补全后，`stock_query query` 可按 Tab 自动补全历史中查询过的股票代码：
+激活后，`stock_query query` 可按 Tab 自动补全历史代码：
 
 ```bash
-# 激活（可加入 ~/.bashrc）
-eval "$(stock_query shell-completions)"
+eval "$(stock_query shell-completions)"   # 可加入 ~/.bashrc
 ```
 
-### 交互式历史选择器
+### 历史选择器
 
 ```bash
 uv run stock-query history
 ```
 
-进入交互界面后，上下键移动、空格标记多选、回车查询：
-
-```
-Select stocks to query — ↑↓ move  Space mark  Enter confirm  q quit
-
-    1. [ ] 603773       沃格光电
-    2. [x] 300502       新易盛
-    3. [x] 000001       平安银行
-
-↑↓:move  Space:mark  Enter:query  q:quit  a:select-all  d:deselect-all
-```
-
-也支持非交互模式：
+上下键移动、空格标记多选、回车查询。也支持非交互模式：
 
 ```bash
 uv run stock-query history --list           # 纯文本列表
 uv run stock-query history --pick 1,3,5     # 按索引查询
 uv run stock-query history --rm 2,4         # 按索引删除
-uv run stock-query history --clear          # 清空所有历史
+uv run stock-query history --clear          # 清空历史
 ```
 
-### 交互式 REPL（支持 Tab 历史补全）
+### 快速重查（last）
+
+```bash
+uv run stock-query last
+```
+
+自动重放最近一次批量查询的股票代码，无需重新选择。
+
+### 自选股管理
+
+```bash
+uv run stock-query watchlist add 000001,600000    # 添加自选
+uv run stock-query watchlist rm 000001            # 删除自选
+uv run stock-query watchlist                      # 交互式选择器查询
+uv run stock-query watchlist --list               # 纯文本列表
+uv run stock-query watchlist --clear              # 清空自选
+```
+
+### 交互式 REPL
 
 ```bash
 uv run stock-query repl
 ```
 
-进入交互模式后：
 - 直接输入代码回车 → 查询行情
-- 按 **Tab 键** → 弹出历史查询代码列表（支持代码/名称模糊匹配）
-- `history` → 查看历史记录
+- **Tab 键** → 历史代码/名称模糊补全
+- `history` → 查看历史
 - `clear` → 清空历史
-- `help` → 查看帮助
-- `quit` → 退出
+- `help` / `quit`
 
 ## 输出示例
 
@@ -121,18 +133,32 @@ uv run stock-query repl
 
 涨为红色，跌为绿色。
 
+## 数据存储
+
+历史记录、自选股存储在项目 `.data/` 目录下的 SQLite 数据库中（已 `.gitignore`）：
+
+```
+.data/stock_query.db
+```
+
+| 表 | 用途 |
+|---|------|
+| `history` | 查询历史，按最近查询排序，上限 100 条 |
+| `last_batch` | 最近一次批量查询的代码快照 |
+| `watchlist` | 自选股列表 |
+
 ## 项目结构
 
 ```
 stock_query/
 ├── __init__.py        # 包入口
 ├── __main__.py        # python -m 入口
-├── cli.py             # argparse CLI（query / history / complete / repl 子命令）
+├── cli.py             # argparse CLI
 ├── fetcher.py         # HTTP 客户端，代码前缀推断
 ├── parser.py          # 腾讯 API 响应解析，按市场映射字段
 ├── formatter.py       # Rich 终端着色输出
 ├── picker.py          # curses 交互式多选器
-├── repl.py            # 交互式 REPL + 历史管理
+├── repl.py            # 交互式 REPL + SQLite 数据管理
 └── tests/
     ├── test_fetcher.py
     ├── test_parser.py

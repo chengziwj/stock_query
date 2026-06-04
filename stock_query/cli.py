@@ -5,15 +5,11 @@ import argparse
 import sys
 import textwrap
 
-import os
-
 from stock_query.fetcher import fetch_quotes, infer_prefix
 from stock_query.formatter import format_quotes
 from stock_query.parser import parse_quotes
 from stock_query.picker import pick
 from stock_query.repl import HistoryStore
-
-_LAST_BATCH_FILE = os.path.expanduser("~/.stock_query_last_batch")
 
 
 _BASH_COMPLETION = textwrap.dedent("""\
@@ -27,7 +23,7 @@ _BASH_COMPLETION = textwrap.dedent("""\
         _init_completion || return
 
         if [[ "$cword" -eq 1 ]]; then
-            COMPREPLY=($(compgen -W "query last repl complete shell-completions history" -- "$cur"))
+            COMPREPLY=($(compgen -W "query last watchlist repl complete shell-completions history" -- "$cur"))
             return
         fi
 
@@ -73,6 +69,13 @@ def build_parser() -> argparse.ArgumentParser:
     h.add_argument("--list", action="store_true", help="List history without interactive picker")
 
     sub.add_parser("last", help="Re-query the last batch of stocks")
+
+    wl = sub.add_parser("watchlist", help="Manage watchlist (favorites)")
+    wl.add_argument("action", nargs="?", choices=["add", "rm"], help="add or remove stocks")
+    wl.add_argument("codes", nargs="?", help="Stock code(s), comma-separated")
+    wl.add_argument("--clear", action="store_true", help="Clear entire watchlist")
+    wl.add_argument("--list", action="store_true", help="List watchlist without interactive picker")
+
     sub.add_parser("repl", help="Interactive REPL with history tab-completion")
     return parser
 
@@ -115,16 +118,10 @@ def run_query(codes_str: str, save_history: bool = True) -> None:
 
     format_quotes(stocks)
 
-    # Save last batch for quick re-query
-    try:
-        with open(_LAST_BATCH_FILE, "w") as f:
-            for c in codes:
-                f.write(c + "\n")
-    except OSError:
-        pass
+    store = HistoryStore()
+    store.save_last_batch(codes)
 
     if save_history:
-        store = HistoryStore()
         for code, stock in zip(codes, stocks):
             store.add(code, stock.get("name", ""))
 
@@ -209,19 +206,61 @@ def run_history(pick_val: str | None, remove: str | None, clear: bool, list_only
 
 def run_last() -> None:
     """Re-query the last batch of stocks."""
-    try:
-        with open(_LAST_BATCH_FILE) as f:
-            codes = [line.strip() for line in f if line.strip()]
-    except (FileNotFoundError, OSError):
-        print("No previous query found.")
-        return
-
+    store = HistoryStore()
+    codes = store.load_last_batch()
     if not codes:
         print("No previous query found.")
         return
 
     print(f"Re-querying: {', '.join(codes)}")
     run_query(",".join(codes), save_history=False)
+
+
+def run_watchlist(action: str | None, codes_str: str | None, clear: bool, list_only: bool) -> None:
+    """Manage watchlist: add, remove, clear, list, or interactive picker."""
+    store = HistoryStore()
+
+    if clear:
+        store.watchlist_clear()
+        print("Watchlist cleared.")
+        return
+
+    if action == "add" and codes_str:
+        codes = [c.strip() for c in codes_str.split(",") if c.strip()]
+        added = []
+        for c in codes:
+            name = store.lookup_name(c) or ""
+            store.watchlist_add(c, name)
+            added.append(c)
+        print(f"Added to watchlist: {', '.join(added)}")
+        return
+
+    if action == "rm" and codes_str:
+        codes = [c.strip() for c in codes_str.split(",") if c.strip()]
+        removed = store.watchlist_remove(codes)
+        if removed:
+            print(f"Removed from watchlist: {', '.join(removed)}")
+        else:
+            print("No matching stocks in watchlist.")
+        return
+
+    entries = store.watchlist_load()
+    if not entries:
+        print("Watchlist is empty. Add stocks with: stock_query watchlist add <code>")
+        return
+
+    if list_only:
+        for i, (code, name) in enumerate(entries, 1):
+            label = f"{name}" if name else "-"
+            print(f"  {i:>3}. {code:<12} {label}")
+        return
+
+    # Interactive picker
+    selected = pick(entries)
+    if selected:
+        run_query(",".join(selected), save_history=False)
+    else:
+        print("Cancelled.")
 
 
 def main() -> None:
@@ -238,6 +277,8 @@ def main() -> None:
         run_history(args.pick, args.remove, args.clear, args.list)
     elif args.command == "last":
         run_last()
+    elif args.command == "watchlist":
+        run_watchlist(args.action, args.codes, args.clear, args.list)
     elif args.command == "repl":
         from stock_query.repl import run_repl
         run_repl()

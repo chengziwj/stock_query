@@ -80,7 +80,7 @@ uv run stock-query last --watch 10s
 uv run stock-query query 000001,600000 --watch 5m
 ```
 
-自动重放最近一次批量查询的股票代码，`--watch` 模式下持续刷新直到 `Ctrl+C` 停止。支持的间隔格式：`10s` / `5m` / `1h`。
+自动重放最近一次批量查询的股票代码。`--watch` 模式下持续刷新，头部显示实时倒计时（`Next in 7s`），`Ctrl+C` 停止。支持的间隔格式：`10s` / `5m` / `1h`。
 
 ### 自选股管理
 

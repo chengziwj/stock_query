@@ -62,34 +62,32 @@ def _parse_duration(raw: str) -> int:
     return value
 
 
-def _countdown(interval: int) -> None:
-    """Display a countdown timer, updating in place each second."""
-    sys.stdout.flush()
-    for remaining in range(interval, 0, -1):
-        m, s = divmod(remaining, 60)
-        if m > 0:
-            label = f"{m}m{s}s"
-        else:
-            label = f"{s}s"
-        print(f"\033[1mNext refresh in {label}...\033[0m  (Ctrl+C to stop)", end="")
-        sys.stdout.flush()
-        time.sleep(1)
-        print("\r\033[K", end="")  # carriage return + clear line
+def _fmt_interval(seconds: int) -> str:
+    m, s = divmod(seconds, 60)
+    return f"{m}m{s}s" if m > 0 else f"{s}s"
 
 
 def _watch_loop(codes_str: str, interval: int) -> None:
     """Run a query repeatedly with the given interval in seconds."""
+    interval_label = _fmt_interval(interval)
     try:
         while True:
             os.system("clear" if os.name == "posix" else "cls")
 
+            # Header placeholder — countdown slot will be updated in-place
             now = datetime.now().strftime("%H:%M:%S")
-            print(f"\033[1mAuto-refresh every {interval}s\033[0m  |  {now}")
+            print(f"\033[1mAuto-refresh every {interval_label}  |  {now}  |  Ctrl+C to stop\033[0m")
             print()
 
             run_query(codes_str, save_history=False)
 
-            _countdown(interval)
+            # Countdown: jump to header line and update in place
+            for remaining in range(interval, 0, -1):
+                label = _fmt_interval(remaining)
+                status = f"\033[1mAuto-refresh every {interval_label}  |  Next in {label}  |  {datetime.now().strftime('%H:%M:%S')}  |  Ctrl+C to stop\033[0m"
+                print(f"\033[H{status}\033[K", end="")
+                sys.stdout.flush()
+                time.sleep(1)
     except KeyboardInterrupt:
         print("\nStopped.")
 

@@ -18,7 +18,7 @@ uv sync
 |------|------|
 | `stock_query query <codes>` | 查询股票行情 |
 | `stock_query history` | 交互式历史选择器（多选查询） |
-| `stock_query last` | 一键重查上一次批量查询 |
+| `stock_query last` | 一键重查上次批量查询（支持定时刷新） |
 | `stock_query watchlist` | 自选股管理（交互式多选查询） |
 | `stock_query repl` | 交互式 REPL（Tab 补全） |
 | `stock_query shell-completions` | 生成 bash 补全脚本 |
@@ -67,13 +67,20 @@ uv run stock-query history --rm 2,4         # 按索引删除
 uv run stock-query history --clear          # 清空历史
 ```
 
-### 快速重查（last）
+### 快速重查 & 定时刷新（last）
 
 ```bash
+# 重查上次批量查询
 uv run stock-query last
+
+# 定时刷新，每 10 秒自动更新
+uv run stock-query last --watch 10s
+
+# 定时刷新指定股票，每 5 分钟更新
+uv run stock-query query 000001,600000 --watch 5m
 ```
 
-自动重放最近一次批量查询的股票代码，无需重新选择。
+自动重放最近一次批量查询的股票代码，`--watch` 模式下持续刷新直到 `Ctrl+C` 停止。支持的间隔格式：`10s` / `5m` / `1h`。
 
 ### 自选股管理
 

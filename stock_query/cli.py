@@ -2,8 +2,12 @@
 from __future__ import annotations
 
 import argparse
+import os
+import re
 import sys
 import textwrap
+import time
+from datetime import datetime
 
 from stock_query.fetcher import fetch_quotes, infer_prefix
 from stock_query.formatter import format_quotes
@@ -44,6 +48,41 @@ _BASH_COMPLETION = textwrap.dedent("""\
 """)
 
 
+def _parse_duration(raw: str) -> int:
+    """Parse a duration string like '10s', '5m', '1h' into seconds."""
+    m = re.match(r"^(\d+)\s*(s|m|h)?$", raw.strip())
+    if not m:
+        raise ValueError(f"Invalid duration: {raw}")
+    value = int(m.group(1))
+    unit = m.group(2) or "s"
+    if unit == "m":
+        return value * 60
+    elif unit == "h":
+        return value * 3600
+    return value
+
+
+def _watch_loop(codes_str: str, interval: int) -> None:
+    """Run a query repeatedly with the given interval in seconds."""
+    first = True
+    try:
+        while True:
+            if not first:
+                time.sleep(interval)
+            first = False
+
+            # Clear screen
+            os.system("clear" if os.name == "posix" else "cls")
+
+            now = datetime.now().strftime("%H:%M:%S")
+            print(f"\033[1mAuto-refresh every {interval}s\033[0m  |  {now}  |  Ctrl+C to stop")
+            print()
+
+            run_query(codes_str, save_history=False)
+    except KeyboardInterrupt:
+        print("\nStopped.")
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="stock_query",
@@ -56,6 +95,7 @@ def build_parser() -> argparse.ArgumentParser:
         "codes",
         help="Stock code(s), comma-separated. E.g. 000001,600000,AAPL",
     )
+    q.add_argument("--watch", metavar="N[s|m|h]", help="Auto-refresh interval, e.g. 10s, 5m, 1h")
 
     c = sub.add_parser("complete", help="Output matching stock codes from history for shell completion")
     c.add_argument("prefix", nargs="?", default="", help="Prefix to filter codes (empty = all)")
@@ -68,7 +108,8 @@ def build_parser() -> argparse.ArgumentParser:
     h.add_argument("--clear", action="store_true", help="Clear all history")
     h.add_argument("--list", action="store_true", help="List history without interactive picker")
 
-    sub.add_parser("last", help="Re-query the last batch of stocks")
+    l = sub.add_parser("last", help="Re-query the last batch of stocks")
+    l.add_argument("--watch", metavar="N[s|m|h]", help="Auto-refresh interval, e.g. 10s, 5m, 1h")
 
     wl = sub.add_parser("watchlist", help="Manage watchlist (favorites)")
     wl.add_argument("action", nargs="?", choices=["add", "rm"], help="add or remove stocks")
@@ -268,15 +309,25 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.command == "query":
-        run_query(args.codes)
+        if args.watch:
+            _watch_loop(args.codes, _parse_duration(args.watch))
+        else:
+            run_query(args.codes)
+    elif args.command == "last":
+        store = HistoryStore()
+        codes = store.load_last_batch()
+        if not codes:
+            print("No previous query found.")
+        elif args.watch:
+            _watch_loop(",".join(codes), _parse_duration(args.watch))
+        else:
+            run_last()
     elif args.command == "complete":
         run_complete(args.prefix)
     elif args.command == "shell-completions":
         print(_BASH_COMPLETION)
     elif args.command == "history":
         run_history(args.pick, args.remove, args.clear, args.list)
-    elif args.command == "last":
-        run_last()
     elif args.command == "watchlist":
         run_watchlist(args.action, args.codes, args.clear, args.list)
     elif args.command == "repl":

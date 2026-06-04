@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import patch, call
-from stock_query.cli import build_parser, run_query, run_complete, run_history, run_last, run_watchlist, _parse_index_list
+from stock_query.cli import build_parser, run_query, run_complete, run_history, run_last, run_watchlist, _parse_duration, _parse_index_list
 
 
 SAMPLE_RAW = (
@@ -333,3 +333,38 @@ def test_run_watchlist_interactive(capsys):
         run_watchlist(action=None, codes_str=None, clear=False, list_only=False)
     captured = capsys.readouterr()
     assert "平安银行" in captured.out
+
+
+def test_parse_duration_seconds():
+    assert _parse_duration("10s") == 10
+    assert _parse_duration("5") == 5
+    assert _parse_duration(" 30 ") == 30
+
+
+def test_parse_duration_minutes():
+    assert _parse_duration("5m") == 300
+    assert _parse_duration("1m") == 60
+
+
+def test_parse_duration_hours():
+    assert _parse_duration("1h") == 3600
+    assert _parse_duration("2h") == 7200
+
+
+def test_parse_duration_invalid():
+    with pytest.raises(ValueError):
+        _parse_duration("abc")
+    with pytest.raises(ValueError):
+        _parse_duration("")
+
+
+def test_build_parser_query_watch():
+    parser = build_parser()
+    args = parser.parse_args(["query", "000001", "--watch", "10s"])
+    assert args.watch == "10s"
+
+
+def test_build_parser_last_watch():
+    parser = build_parser()
+    args = parser.parse_args(["last", "--watch", "5m"])
+    assert args.watch == "5m"

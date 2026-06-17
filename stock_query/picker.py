@@ -21,7 +21,12 @@ def pick(entries: list[tuple[str, str]]) -> list[str]:
 
 def _curses_loop(items: list[Entry]) -> list[str]:
     """Run the curses main loop. Uses A_REVERSE / A_BOLD for portability (no color)."""
-    stdscr = curses.initscr()
+    try:
+        stdscr = curses.initscr()
+    except Exception:
+        # Terminal doesn't support curses — fall back gracefully
+        return []
+
     try:
         curses.noecho()
         curses.cbreak()

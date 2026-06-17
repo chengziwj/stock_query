@@ -14,8 +14,8 @@ SAMPLE_RAW = (
 
 def test_build_parser():
     parser = build_parser()
-    args = parser.parse_args(["query", "000001,600000"])
-    assert args.codes == "000001,600000"
+    args = parser.parse_args(["query", "000001", "600000"])
+    assert args.codes == ["000001", "600000"]
 
 
 def test_build_parser_complete():
@@ -87,8 +87,8 @@ def test_parse_index_list_invalid():
 
 
 def test_run_query_single(capsys):
-    with patch("stock_query.cli.HistoryStore") as mock_store_cls, \
-         patch("stock_query.cli.fetch_quotes") as mock_fetch:
+    with patch("stock_query.query.HistoryStore") as mock_store_cls, \
+         patch("stock_query.query.fetch_quotes") as mock_fetch:
         mock_fetch.return_value = SAMPLE_RAW
         run_query("000001")
     captured = capsys.readouterr()
@@ -98,8 +98,8 @@ def test_run_query_single(capsys):
 
 
 def test_run_query_batch(capsys):
-    with patch("stock_query.cli.HistoryStore") as mock_store_cls, \
-         patch("stock_query.cli.fetch_quotes") as mock_fetch:
+    with patch("stock_query.query.HistoryStore") as mock_store_cls, \
+         patch("stock_query.query.fetch_quotes") as mock_fetch:
         mock_fetch.return_value = SAMPLE_RAW
         run_query("000001,600000")
     captured = capsys.readouterr()
@@ -110,8 +110,8 @@ def test_run_query_batch(capsys):
 
 def test_run_query_network_error(capsys):
     import requests
-    with patch("stock_query.cli.HistoryStore"), \
-         patch("stock_query.cli.fetch_quotes") as mock_fetch:
+    with patch("stock_query.query.HistoryStore"), \
+         patch("stock_query.query.fetch_quotes") as mock_fetch:
         mock_fetch.side_effect = requests.ConnectionError("no net")
         run_query("000001")
     captured = capsys.readouterr()
@@ -194,7 +194,7 @@ def test_run_history_remove_none_found(capsys):
 
 def test_run_history_pick(capsys):
     with patch("stock_query.cli.HistoryStore") as mock_store_cls, \
-         patch("stock_query.cli.fetch_quotes") as mock_fetch:
+         patch("stock_query.query.fetch_quotes") as mock_fetch:
         mock_store_cls.return_value.get_by_index.return_value = ["000001", "600000"]
         mock_fetch.return_value = SAMPLE_RAW
         run_history(pick_val="1,2", remove=None, clear=False, list_only=False)
@@ -208,7 +208,7 @@ def test_run_history_interactive(capsys):
     fake_entries = [("600000", "浦发银行"), ("000001", "平安银行")]
     with patch("stock_query.cli.HistoryStore") as mock_store_cls, \
          patch("stock_query.cli.pick") as mock_pick, \
-         patch("stock_query.cli.fetch_quotes") as mock_fetch:
+         patch("stock_query.query.fetch_quotes") as mock_fetch:
         mock_store_cls.return_value.load.return_value = fake_entries
         mock_pick.return_value = ["000001"]
         mock_fetch.return_value = SAMPLE_RAW
@@ -223,7 +223,7 @@ def test_run_history_interactive_cancel(capsys):
     fake_entries = [("600000", "浦发银行")]
     with patch("stock_query.cli.HistoryStore") as mock_store_cls, \
          patch("stock_query.cli.pick") as mock_pick, \
-         patch("stock_query.cli.fetch_quotes") as mock_fetch:
+         patch("stock_query.query.fetch_quotes") as mock_fetch:
         mock_store_cls.return_value.load.return_value = fake_entries
         mock_pick.return_value = []
         run_history(pick_val=None, remove=None, clear=False, list_only=False)
@@ -234,7 +234,7 @@ def test_run_history_interactive_cancel(capsys):
 
 def test_run_last(capsys):
     with patch("stock_query.cli.HistoryStore") as mock_store_cls, \
-         patch("stock_query.cli.fetch_quotes") as mock_fetch:
+         patch("stock_query.query.fetch_quotes") as mock_fetch:
         mock_store_cls.return_value.load_last_batch.return_value = ["000001", "600000"]
         mock_fetch.return_value = SAMPLE_RAW
         run_last()
@@ -326,7 +326,7 @@ def test_run_watchlist_interactive(capsys):
     fake_entries = [("000001", "平安银行")]
     with patch("stock_query.cli.HistoryStore") as mock_store_cls, \
          patch("stock_query.cli.pick") as mock_pick, \
-         patch("stock_query.cli.fetch_quotes") as mock_fetch:
+         patch("stock_query.query.fetch_quotes") as mock_fetch:
         mock_store_cls.return_value.watchlist_load.return_value = fake_entries
         mock_pick.return_value = ["000001"]
         mock_fetch.return_value = SAMPLE_RAW
@@ -368,3 +368,9 @@ def test_build_parser_last_watch():
     parser = build_parser()
     args = parser.parse_args(["last", "--watch", "5m"])
     assert args.watch == "5m"
+
+
+def test_build_parser_refresh_namelist():
+    parser = build_parser()
+    args = parser.parse_args(["refresh-namelist"])
+    assert args.command == "refresh-namelist"

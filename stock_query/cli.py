@@ -9,14 +9,15 @@ import textwrap
 import time
 from datetime import datetime
 
-from stock_query.fetcher import fetch_quotes, infer_prefix
-from stock_query.formatter import format_quotes
-from stock_query.parser import parse_quotes
+from stock_query.fetcher import infer_prefix
 from stock_query.picker import pick
-from stock_query.repl import HistoryStore
+from stock_query.query import execute_query
+from stock_query.store import HistoryStore
 
 
-_BASH_COMPLETION = textwrap.dedent("""\
+def _get_bash_completion() -> str:
+    """Return the bash completion script, computed lazily."""
+    return textwrap.dedent("""\
     # stock_query bash completion — source this file in your shell:
     #   eval "$(stock_query shell-completions)"
     # Or add to ~/.bashrc:
@@ -27,7 +28,7 @@ _BASH_COMPLETION = textwrap.dedent("""\
         _init_completion || return
 
         if [[ "$cword" -eq 1 ]]; then
-            COMPREPLY=($(compgen -W "query last watchlist repl complete shell-completions history" -- "$cur"))
+            COMPREPLY=($(compgen -W "query last watchlist repl complete shell-completions history refresh-namelist" -- "$cur"))
             return
         fi
 
@@ -99,10 +100,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     sub = parser.add_subparsers(dest="command")
 
-    q = sub.add_parser("query", help="Query stock quotes")
+    q = sub.add_parser("query", help="Query stock quotes by code or name")
     q.add_argument(
         "codes",
-        help="Stock code(s), comma-separated. E.g. 000001,600000,AAPL",
+        nargs="+",
+        help="Stock code(s) or name(s), separated by spaces. E.g. 000001 平安银行 AAPL",
     )
     q.add_argument("--watch", metavar="N[s|m|h]", help="Auto-refresh interval, e.g. 10s, 5m, 1h")
 
@@ -127,53 +129,15 @@ def build_parser() -> argparse.ArgumentParser:
     wl.add_argument("--list", action="store_true", help="List watchlist without interactive picker")
 
     sub.add_parser("repl", help="Interactive REPL with history tab-completion")
+
+    nl = sub.add_parser("refresh-namelist", help="Download/refresh the A-share stock name list for name-based lookup")
+    nl.add_argument("--force", action="store_true", help="Force re-download even within cooldown period")
     return parser
 
 
 def run_query(codes_str: str, save_history: bool = True) -> None:
     """Run a query from raw comma-separated codes string."""
-    codes = [c.strip() for c in codes_str.split(",") if c.strip()]
-    if not codes:
-        print("Usage: stock_query query <code>[,<code>...]")
-        return
-
-    # Infer prefixes
-    full_codes = []
-    for c in codes:
-        try:
-            full_codes.append(infer_prefix(c))
-        except ValueError as e:
-            print(f"Warning: {e}")
-            continue
-
-    if not full_codes:
-        print("Error: no valid stock codes provided.")
-        return
-
-    try:
-        raw = fetch_quotes(full_codes)
-    except Exception as e:
-        print(f"Error: network request failed — {e}")
-        return
-
-    if not raw.strip():
-        print("Error: received empty response from API.")
-        return
-
-    stocks = parse_quotes(raw)
-
-    if not stocks:
-        print("Warning: no data returned for the given codes.")
-        return
-
-    format_quotes(stocks)
-
-    store = HistoryStore()
-    store.save_last_batch(codes)
-
-    if save_history:
-        for code, stock in zip(codes, stocks):
-            store.add(code, stock.get("name", ""))
+    execute_query(codes_str, save_history=save_history)
 
 
 def run_complete(prefix: str) -> None:
@@ -254,12 +218,20 @@ def run_history(pick_val: str | None, remove: str | None, clear: bool, list_only
         print("Cancelled.")
 
 
-def run_last() -> None:
-    """Re-query the last batch of stocks."""
+def run_last(watch: str | None = None) -> None:
+    """Re-query the last batch of stocks.
+
+    Args:
+        watch: Optional auto-refresh interval string (e.g. "10s", "5m").
+    """
     store = HistoryStore()
     codes = store.load_last_batch()
     if not codes:
         print("No previous query found.")
+        return
+
+    if watch:
+        _watch_loop(",".join(codes), _parse_duration(watch))
         return
 
     print(f"Re-querying: {', '.join(codes)}")
@@ -318,23 +290,17 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.command == "query":
+        codes_str = " ".join(args.codes)
         if args.watch:
-            _watch_loop(args.codes, _parse_duration(args.watch))
+            _watch_loop(codes_str, _parse_duration(args.watch))
         else:
-            run_query(args.codes)
+            run_query(codes_str)
     elif args.command == "last":
-        store = HistoryStore()
-        codes = store.load_last_batch()
-        if not codes:
-            print("No previous query found.")
-        elif args.watch:
-            _watch_loop(",".join(codes), _parse_duration(args.watch))
-        else:
-            run_last()
+        run_last(watch=args.watch)
     elif args.command == "complete":
         run_complete(args.prefix)
     elif args.command == "shell-completions":
-        print(_BASH_COMPLETION)
+        print(_get_bash_completion())
     elif args.command == "history":
         run_history(args.pick, args.remove, args.clear, args.list)
     elif args.command == "watchlist":
@@ -342,6 +308,26 @@ def main() -> None:
     elif args.command == "repl":
         from stock_query.repl import run_repl
         run_repl()
+    elif args.command == "refresh-namelist":
+        from stock_query.namelist import NameList
+        from stock_query.store import HistoryStore
+        from datetime import datetime
+        nl = NameList(HistoryStore().db_path)
+        before = nl.count()
+        count = nl.refresh(force=args.force)
+        if count == before and count > 0:
+            info = nl.status()
+            ts = info["last_refresh"]
+            ago = ""
+            if ts:
+                secs = int(datetime.now().timestamp() - ts)
+                if secs < 120:
+                    ago = f" ({secs}s ago)"
+                elif secs < 7200:
+                    ago = f" ({secs // 60}m ago)"
+                else:
+                    ago = f" ({secs // 3600}h ago)"
+            print(f"Name list cached: {count} A-share stocks{ago}. Use --force to re-download.")
     else:
         parser.print_help()
         sys.exit(1)

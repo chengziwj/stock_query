@@ -1,6 +1,8 @@
 """HTTP client for Tencent stock API."""
 from __future__ import annotations
 
+import time
+
 import requests
 
 TIMEOUT = 10
@@ -11,6 +13,8 @@ HEADERS = {
                   "Chrome/120.0.0.0 Safari/537.36",
     "Referer": "https://finance.qq.com/",
 }
+RETRIES = 2
+RETRY_BACKOFF = 1.0  # seconds
 
 SZ_PREFIXES = {"000", "002", "003", "300", "301"}
 SH_PREFIXES = {"600", "601", "603", "605", "688", "689"}
@@ -59,14 +63,17 @@ def fetch_quotes(codes: list[str]) -> str:
     codes = [c.strip() for c in codes]
     url = BASE_URL + ",".join(codes)
 
-    for attempt in range(2):
+    for attempt in range(RETRIES):
         try:
             resp = requests.get(url, headers=HEADERS, timeout=TIMEOUT)
             if resp.status_code == 200:
                 return resp.text
-            if attempt == 0 and resp.status_code >= 500:
+            if attempt < RETRIES - 1 and resp.status_code >= 500:
+                time.sleep(RETRY_BACKOFF)
                 continue
             return ""
         except (requests.ConnectionError, requests.Timeout):
-            if attempt == 1:
+            if attempt < RETRIES - 1:
+                time.sleep(RETRY_BACKOFF)
+            else:
                 raise

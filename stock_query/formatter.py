@@ -1,10 +1,19 @@
 """Rich-based output formatting for stock quotes."""
-from typing import Dict, List
+from __future__ import annotations
+
 from rich.console import Console
 from rich.table import Table
 from rich import box
 
-console = Console()
+_console: Console | None = None
+
+
+def _get_console() -> Console:
+    """Lazy-initialize the Rich console singleton."""
+    global _console
+    if _console is None:
+        _console = Console()
+    return _console
 
 NUMERIC_FIELDS = {
     "price", "prev_close", "open", "high", "low",
@@ -81,26 +90,26 @@ def _color_for_change(change_str: str) -> str:
         return "white"
 
 
-def _render_card(stocks: List[Dict]) -> None:
+def _render_card(stocks: list[dict]) -> None:
     """Render single stock as a vertical card."""
     stock = stocks[0]
     name = stock.get("name", "?")
     code = stock.get("code", "?")
-    console.print(f"\n[bold cyan]{name}[/bold cyan] ({code})", justify="center")
-    console.print("─" * 40, style="dim")
+    _get_console().print(f"\n[bold cyan]{name}[/bold cyan] ({code})", justify="center")
+    _get_console().print("─" * 40, style="dim")
 
     for key, label in CARD_FIELDS:
         raw = stock.get(key, "")
         if key in ("change_pct", "change"):
             color = _color_for_change(raw)
             val = format_value(key, raw)
-            console.print(f"  {label}: [{color}]{val}[/{color}]")
+            _get_console().print(f"  {label}: [{color}]{val}[/{color}]")
         else:
-            console.print(f"  {label}: {format_value(key, raw)}")
-    console.print()
+            _get_console().print(f"  {label}: {format_value(key, raw)}")
+    _get_console().print()
 
 
-def _render_table(stocks: List[Dict]) -> None:
+def _render_table(stocks: list[dict]) -> None:
     """Render multiple stocks as a Rich table."""
     table = Table(box=box.SIMPLE_HEAD, expand=False)
     table.add_column("#", style="dim", width=3)
@@ -124,15 +133,15 @@ def _render_table(stocks: List[Dict]) -> None:
 
         table.add_row(*row)
 
-    console.print()
-    console.print(table)
-    console.print()
+    _get_console().print()
+    _get_console().print(table)
+    _get_console().print()
 
 
-def format_quotes(stocks: List[Dict]) -> None:
+def format_quotes(stocks: list[dict]) -> None:
     """Render stock quotes to terminal. Single stock → card, batch → table."""
     if not stocks:
-        console.print("[dim]No data to display.[/dim]")
+        _get_console().print("[dim]No data to display.[/dim]")
         return
 
     if len(stocks) == 1:
